@@ -22,6 +22,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -51,7 +52,7 @@ public class AppTest {
     @Test
     public void testFailJsonMime() throws Exception {
 
-        var mime = new MimeMessage(null, new ByteArrayInputStream(loadResource(mimeFile)));
+        MimeMessage mime = new MimeMessage(null, new ByteArrayInputStream(loadResource(mimeFile)));
         try {
             mapper.writer().writeValueAsString(mime);
             fail("Expected mime to JSON conversion failure.");
@@ -64,7 +65,7 @@ public class AppTest {
     public void testAppFlowGood() throws Exception {
 
         assertNotNull(goodChannel);
-        var msg = buildPayload();
+        App.InputPayload msg = buildPayload();
         log.info("Sending message on good channel");
         goodChannel.send(MessageBuilder.withPayload(msg).build());
         assertTrue("Message on good channel processed.", msg.latch.await(3L, TimeUnit.SECONDS));
@@ -74,7 +75,7 @@ public class AppTest {
     public void testAppFlowBad() throws Exception {
 
         assertNotNull(faultyChannel);
-        var msg = buildPayload();
+        App.InputPayload msg = buildPayload();
         log.info("Sending message on faulty channel");
         faultyChannel.send(MessageBuilder.withPayload(msg).build());
         assertTrue("Message on faulty channel processed.", msg.latch.await(3L, TimeUnit.SECONDS));
@@ -82,7 +83,7 @@ public class AppTest {
 
     App.InputPayload buildPayload() throws Exception {
 
-        var msg = new App.InputPayload();
+        App.InputPayload msg = new App.InputPayload();
         msg.latch = new CountDownLatch(1);
         msg.mimeMessage = new MimeMessage(null, new ByteArrayInputStream(loadResource(mimeFile)));
         msg.subflow = true;
@@ -91,7 +92,13 @@ public class AppTest {
 
     byte[] loadResource(String fileName) throws Exception {
         try (InputStream in = Thread.currentThread().getContextClassLoader().getResourceAsStream(fileName)) {
-            return in.readAllBytes();
+            ByteArrayOutputStream bout = new ByteArrayOutputStream();
+            int l;
+            byte[] buf = new byte[8192];
+            while ((l = in.read(buf)) > 0) {
+                bout.write(buf, 0, l);
+            }
+            return bout.toByteArray();
         }
     }
 

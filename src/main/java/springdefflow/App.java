@@ -90,7 +90,7 @@ public class App {
 
         public Message<InputPayload> handle(Message<InputPayload> message) throws Exception {
 
-            var bout = new ByteArrayOutputStream();
+            ByteArrayOutputStream bout = new ByteArrayOutputStream();
             message.getPayload().mimeMessage.writeTo(bout);
             log.info("Mime message written to {} bytes.", bout.size());
             return message;
@@ -120,7 +120,7 @@ public class App {
 
         public Message<?> handle(Message<?> message) {
 
-            var latch = Optional.ofNullable(message.getHeaders().get(DONE_LATCH, CountDownLatch.class));
+            Optional<CountDownLatch> latch = Optional.ofNullable(message.getHeaders().get(DONE_LATCH, CountDownLatch.class));
             if (latch.isPresent()) {
                 log.info("Releasing latch for message {}", message);
                 latch.get().countDown();
