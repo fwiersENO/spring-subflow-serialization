@@ -14,7 +14,6 @@ import org.springframework.integration.dsl.MessageChannels;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 
-import java.io.ByteArrayOutputStream;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 
@@ -45,12 +44,10 @@ public class App {
 
         return IntegrationFlows.from(inputGoodChannel())
             .enrichHeaders(m -> m.headerExpressions(h -> h.put(DONE_LATCH, "payload.latch")))
-            .handle(parseMime())
             // subflow without the use of defaultOutputToParentFlow
             .<InputPayload, Boolean>route(p -> p.subflow,
-                m -> m.subFlowMapping(false, f -> f.transform(p -> false))
-                    .subFlowMapping(true, f -> f.transform(p -> 1)))
-            .handle(logBitPayload())
+                m -> m.subFlowMapping(false, f -> f.transform(p -> p))
+                    .subFlowMapping(true, f -> f.transform(p -> p)))
             .handle(latchCountDown())
             .log().get();
     }
@@ -60,13 +57,11 @@ public class App {
 
         return IntegrationFlows.from(inputFaultyChannel())
             .enrichHeaders(m -> m.headerExpressions(h -> h.put(DONE_LATCH, "payload.latch")))
-            .handle(parseMime())
             // subflow with the use of defaultOutputToParentFlow
             .<InputPayload, Boolean>route(p -> p.subflow,
-                m -> m.subFlowMapping(false, f -> f.transform(p -> false))
+                m -> m.subFlowMapping(false, f -> f.transform(p -> p))
                     .resolutionRequired(false)
                     .defaultOutputToParentFlow())
-            .handle(logBitPayload())
             .handle(latchCountDown())
             .log().get();
     }
@@ -79,36 +74,6 @@ public class App {
     @Bean
     MessageChannel inputFaultyChannel() {
         return MessageChannels.direct().get();
-    }
-
-    @Bean
-    ParseMime parseMime() {
-        return new ParseMime();
-    }
-
-    class ParseMime {
-
-        public Message<InputPayload> handle(Message<InputPayload> message) throws Exception {
-
-            ByteArrayOutputStream bout = new ByteArrayOutputStream();
-            message.getPayload().mimeMessage.writeTo(bout);
-            log.info("Mime message written to {} bytes.", bout.size());
-            return message;
-        }
-    }
-
-    @Bean
-    LogBitPayload logBitPayload() {
-        return new LogBitPayload();
-    }
-
-    class LogBitPayload {
-
-        public Message<Object> handle(Message<Object> message) {
-
-            log.info("Payload value set to {}", message.getPayload());
-            return message;
-        }
     }
 
     @Bean
