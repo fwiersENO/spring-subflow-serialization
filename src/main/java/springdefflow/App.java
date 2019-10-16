@@ -21,7 +21,7 @@ import javax.mail.internet.MimeMessage;
 
 @Configuration
 @EnableAutoConfiguration(exclude = { JmxAutoConfiguration.class })
-@EnableBinding(RabbitBindings.class) // <-- this is what causes the exception in the faulty flow.
+@EnableBinding // <-- this is what causes the exception in the faulty flow.
 public class App {
 
     public static void main(String[] args) {
